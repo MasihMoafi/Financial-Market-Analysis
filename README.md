@@ -1,0 +1,1 @@
+** This repo contains multiple projects in the domain of financial markets. Since most findings are proprietary by the project owner, they haven't been published. If interested, contact me for more information. **
