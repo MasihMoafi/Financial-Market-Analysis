@@ -1,93 +1,25 @@
-# Financial Market Analysis
-
-A collection of machine learning projects for financial market analysis, covering time-series forecasting, clustering, reinforcement learning, and dynamic pricing strategies.
-
 ---
-
-## Projects
-
-### 1. BTC Time Series Analysis (ResNet-LSTM)
-
-Hybrid deep learning model combining LSTM with Residual Network architecture for Bitcoin price prediction.
-
-**Architecture:**
-- Two LSTM layers with dropout regularization
-- TimeDistributed Dense layer applied to each time step
-- ResNet-style residual connections via custom ResidualWrapper
-
-**Results:**
-| Metric | Value |
-|--------|-------|
-| MAE | 0.015 |
-| MSE | 0.0005 |
-| RMSE | 0.023 |
-
-**Key Features:**
-- Predicts price *changes* rather than absolute prices for robustness
-- 6-day lookback window predicting 6-day forward changes
-- Includes swing trading simulation with SMA-30 indicator
-- Compared against CNN-Transformers, vanilla LSTM, regression, and ConvNet variants
-
+name: Financial Market Analysis (Double-Tower Transformer)
+type: Quantitative Research / ML Engineering
 ---
+## Content
 
-### 2. Clustering 100 Crypto Coins
+### Intro - What is it? Briefly
+A predictive machine learning system explicitly designed to generate profitable trading signals from high-frequency (1-minute) EUR/USD forex data. The flagship focus of this repository is a custom Double-Tower Gated Transformer Network (GTN) built to predict Take Profit / Stop Loss (TP/SL) strikes.
 
-Unsupervised clustering of cryptocurrencies using K-Means based on market data attributes.
+### How Does it Work? Technical Spec.
+The data pipeline processes 1-minute OHLC bars to map out realistic TP/SL bounds over a 24-hour lookahead rather than using fixed time horizons. 
+The core model, the **Gated Transformer Network (GTN)**, utilizes a dual-tower architecture that separates feature interactions from temporal sequences. It replaces traditional sinusoidal encodings with learned time embeddings to capture market regime shifts and session overlaps (London, NY, Tokyo). 
+To combat severe class imbalance (the model's tendency to constantly predict "keep/hold"), the network optimizes against a custom cost matrix and weighted cross-entropy loss.
 
-**Pipeline:**
-- Data retrieval via CoinGecko API
-- Preprocessing and feature engineering
-- K-Means clustering with PCA for visualization
+### What Sets This Project Apart? 
+Instead of optimizing for standard classification accuracy, the pipeline tackles raw profitability. The models learn the structural mechanics of price action, balancing Risk/Reward ratios (e.g., 1:2) against real-world MetaTrader 5 execution constraints (enforcing next-candle open entries and proper UTF-16-LE signal formatting).
 
-**Results:**
-- Silhouette Score: **0.914**
+### Evals and test Series
+- **Primary Metric**: Composite Score = `(buy_precision + sell_precision)/2 - 0.25 * |buy_precision - sell_precision|`
+- **Best GTN Score**: 0.36 Composite
+- **Baseline (LightGBM)**: 0.37 Composite (but highly stochastic and prone to overfitting the 'keep' class).
+- **Status**: The dual-tower architecture theoretically maps the feature-space better than tree-based models, but converting high composite scores to live P&L in MT5 remains the primary hurdle.
 
----
-
-### 3. Transformers for Time-Series Analysis
-
-Transformer-based architecture for financial time-series forecasting.
-
-**Branches:**
-- `focal-loss-gpu-opts` - Focal loss implementation with GPU optimizations
-- `gtn-transformer-variant` - Gated Transformer Network variant
-
----
-
-### 4. RL Trader Agent
-
-Reinforcement learning agent for automated trading strategies.
-
-*Work in progress*
-
----
-
-### 5. Dynamic Pricing Strategy
-
-Random Forest Regression model for predicting optimal pricing based on market conditions.
-
-**Features:**
-- Number of riders/drivers
-- Vehicle type
-- Expected ride duration
-
-**Pipeline:**
-- Categorical encoding and outlier detection
-- EDA with Plotly visualizations
-- Random Forest training and evaluation
-
----
-
-## Tech Stack
-
-- **Deep Learning:** PyTorch, TensorFlow/Keras
-- **ML:** scikit-learn, XGBoost
-- **Data:** Pandas, NumPy
-- **Visualization:** Matplotlib, Seaborn, Plotly
-- **APIs:** CoinGecko
-
----
-
-## Contact
-
-For detailed findings and proprietary implementations, contact: masihmoafi12@gmail.com
+### Future Dev
+find out why despite everything we underfitted? if the code is available investigate it to ensure the code doesn't have any logical issues
