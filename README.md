@@ -1,25 +1,53 @@
----
-name: Financial Market Analysis (Double-Tower Transformer)
-type: Quantitative Research / ML Engineering
----
-## Content
+# Financial Market Analysis — Double-Tower Transformer for FX Signal Prediction
 
-### Intro - What is it? Briefly
-A predictive machine learning system explicitly designed to generate profitable trading signals from high-frequency (1-minute) EUR/USD forex data. The flagship focus of this repository is a custom Double-Tower Gated Transformer Network (GTN) built to predict Take Profit / Stop Loss (TP/SL) strikes.
+![architecture](docs/architecture.png)
 
-### How Does it Work? Technical Spec.
-The data pipeline processes 1-minute OHLC bars to map out realistic TP/SL bounds over a 24-hour lookahead rather than using fixed time horizons. 
-The core model, the **Gated Transformer Network (GTN)**, utilizes a dual-tower architecture that separates feature interactions from temporal sequences. It replaces traditional sinusoidal encodings with learned time embeddings to capture market regime shifts and session overlaps (London, NY, Tokyo). 
-To combat severe class imbalance (the model's tendency to constantly predict "keep/hold"), the network optimizes against a custom cost matrix and weighted cross-entropy loss.
+Predictive ML system generating trading signals from 5 years of 1-minute EUR/USD data. Flagship model is a custom **Gated Transformer Network (GTN)** with a dual-tower architecture (features × time), benchmarked against 5 other approaches, with a live MetaTrader 5 execution pipeline.
 
-### What Sets This Project Apart? 
-Instead of optimizing for standard classification accuracy, the pipeline tackles raw profitability. The models learn the structural mechanics of price action, balancing Risk/Reward ratios (e.g., 1:2) against real-world MetaTrader 5 execution constraints (enforcing next-candle open entries and proper UTF-16-LE signal formatting).
+## Results
 
-### Evals and test Series
-- **Primary Metric**: Composite Score = `(buy_precision + sell_precision)/2 - 0.25 * |buy_precision - sell_precision|`
-- **Best GTN Score**: 0.36 Composite
-- **Baseline (LightGBM)**: 0.37 Composite (but highly stochastic and prone to overfitting the 'keep' class).
-- **Status**: The dual-tower architecture theoretically maps the feature-space better than tree-based models, but converting high composite scores to live P&L in MT5 remains the primary hurdle.
+| Model | Composite Score | Notes |
+|---|---|---|
+| LightGBM (baseline) | 0.37 | Best single run, but stochastic/not reproducible (typical: 0.20–0.25) |
+| **GTN (dual-tower Transformer)** | 0.36 | Learned time embeddings > sin/cos encoding |
+| CatBoost + Sharpe optimization | — | Optimizes Sharpe directly instead of accuracy |
+| Regression (pips/R:R/prob) | — | Multi-stage, volatility-adaptive |
+| Ensemble + regime detection | — | Regime-specific TP/SL |
+| Direct P&L neural net | — | Custom P&L loss, Kelly sizing |
 
-### Future Dev
-find out why despite everything we underfitted? if the code is available investigate it to ensure the code doesn't have any logical issues
+*Composite Score = (buy_precision + sell_precision)/2 − 0.25·|buy_precision − sell_precision|*
+
+**Core open problem:** a high composite score doesn't reliably translate to live MT5 P&L — every experiment above attacks this from a different angle.
+
+## Pipeline
+
+```
+1-min OHLC (5yr) → TP/SL signal generation (24h lookahead) → feature engineering
+  → model training → MT5 backtest (0.1 lot, R:R 1:2/1:3)
+```
+
+- Signal logic evolved from fixed-horizon labels ("+10 pips in N hours") to **TP/SL-hit-first labels**, far more robust to market structure.
+- Entry price corrected to next-candle open (removes lookahead bias).
+- Multi-timeframe features (5m–4h), ATR/volatility regime, session-overlap timing, rolling S/R levels.
+
+## Engineering gotchas (the expensive lessons)
+
+- **MT5 requires UTF-16LE** for signal CSVs — UTF-8 silently fails to load.
+- **`sklearn.LabelEncoder` sorts alphabetically** (`buy, keep, sell` → `0,1,2`) — must be explicitly remapped to `(1, 0, -1)` before MQ5 sees it.
+- Sequence construction is **unnecessary for tree models** (CatBoost/LGBM) — building it anyway cost hours of runtime for zero benefit.
+- Models default to over-predicting "keep" (majority class) — fixed with a custom cost matrix + weighted cross-entropy, which beat focal loss and undersampling.
+
+## Repo contents
+
+Core signal-generation pipeline, the flagship model, and evaluation code — not the full experiment history (30+ model variants live in a private research log; only the representative/best ones are here).
+
+- `data_pipeline/` — canonical TP/SL signal generation + raw data prep
+- `model/` — GTN dual-tower Transformer (best deep-learning result)
+- `backtest_eval/` — composite score / performance metrics used to score every model above
+
+## Next steps
+
+- Ensemble the top 2–3 models
+- Walk-forward validation (rolling windows) instead of a single train/test split
+- Incorporate economic calendar / sentiment data
+- Full RL trading agent (long-term)
